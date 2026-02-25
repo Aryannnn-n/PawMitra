@@ -1,0 +1,17 @@
+import express from 'express';
+import AdminRouter from './routes/admin.routes.js';
+import UserRouter from './routes/user.routes.js';
+
+const app = express();
+app.use(express.json());
+
+// Test route
+app.get('/', (req, res) => {
+  res.send('Hello , the backend is working !');
+});
+
+// Routes middleware
+app.use('/v1/user', UserRouter);
+app.use('/v1/admin', AdminRouter);
+
+export { app };
