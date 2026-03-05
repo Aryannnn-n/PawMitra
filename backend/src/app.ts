@@ -3,19 +3,18 @@ import AdminRouter from './routes/admin.routes.js';
 import AuthRouter from './routes/auth.routes.js';
 import UserRouter from './routes/user.routes.js';
 
-// Test Prisma Client
-
 const app = express();
+
 app.use(express.json());
 
-// Test route
-app.get('/', (req, res) => {
-  res.send('Hello , the backend is working !');
+// Health check
+app.get('/', (_req, res) => {
+  res.json({ msg: '🐾 PawMitra backend is running!' });
 });
 
-// Routes middleware
-app.use('/v1/user', UserRouter);
-app.use('/v1/admin', AdminRouter);
+// Routes
 app.use('/api/auth', AuthRouter);
+app.use('/api/users', UserRouter);
+app.use('/api/admin', AdminRouter);
 
 export { app };
