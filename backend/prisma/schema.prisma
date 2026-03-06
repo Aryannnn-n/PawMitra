@@ -41,7 +41,6 @@ enum PetGender {
   UNKNOWN
 }
 
-// NEW ENUM
 enum AdoptionStatus {
   PENDING
   APPROVED
@@ -68,9 +67,17 @@ model User {
   pets        Pet[] @relation("OwnedPets")
   adoptedPets Pet[] @relation("AdoptedPets")
 
-  // NEW RELATIONS
+  // Adoption
   adoptionRequests AdoptionRequest[]
-  notifications    Notification[]
+
+  // Notifications
+  notifications Notification[]
+
+  // Messaging
+  sentMessages        Message[]        @relation("SentMessages")
+  receivedMessages    Message[]        @relation("ReceivedMessages")
+  roomParticipants    RoomParticipant[]
+  roomMessages        RoomMessage[]
 }
 
 
@@ -111,12 +118,15 @@ model Pet {
   ownerId          Int
   owner            User             @relation("OwnedPets", fields: [ownerId], references: [id], onDelete: Cascade)
 
-  // Adopter (set when adoption approved)
+  // Adopter
   adoptedById      Int?
   adoptedBy        User?            @relation("AdoptedPets", fields: [adoptedById], references: [id], onDelete: SetNull)
 
-  // NEW RELATION
+  // Adoption Requests
   adoptionRequests AdoptionRequest[]
+
+  // Chat Rooms
+  chatRooms ChatRoom[]
 }
 
 
@@ -146,4 +156,63 @@ model Notification {
 
   userId    Int
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+// DIRECT MESSAGE (User → User)
+model Message {
+  id         Int      @id @default(autoincrement())
+  content    String   @db.Text
+  isRead     Boolean  @default(false)
+  timestamp  DateTime @default(now()) @db.Timestamptz
+
+  senderId   Int
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  receiverId Int
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+
+// CHAT ROOM
+model ChatRoom {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  isDisabled Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  petId      Int?
+  pet        Pet?     @relation(fields: [petId], references: [id], onDelete: SetNull)
+
+  participants RoomParticipant[]
+  messages     RoomMessage[]
+}
+
+
+// ROOM PARTICIPANTS
+model RoomParticipant {
+  id       Int      @id @default(autoincrement())
+  joinedAt DateTime @default(now())
+
+  roomId   Int
+  room     ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  userId   Int
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+
+// ROOM MESSAGES
+model RoomMessage {
+  id        Int      @id @default(autoincrement())
+  message   String   @db.Text
+  timestamp DateTime @default(now()) @db.Timestamptz
+
+  roomId    Int
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  senderId  Int
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
 }
