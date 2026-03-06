@@ -41,6 +41,14 @@ enum PetGender {
   UNKNOWN
 }
 
+// NEW ENUM
+enum AdoptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+
 // USER
 model User {
   id        Int      @id @default(autoincrement())
@@ -56,10 +64,15 @@ model User {
   phone     String?  @db.VarChar(20)
   location  String?  @db.VarChar(255)
 
-  // Relations — Chunk 2
+  // Existing Relations
   pets        Pet[] @relation("OwnedPets")
   adoptedPets Pet[] @relation("AdoptedPets")
+
+  // NEW RELATIONS
+  adoptionRequests AdoptionRequest[]
+  notifications    Notification[]
 }
+
 
 // PET
 model Pet {
@@ -101,4 +114,36 @@ model Pet {
   // Adopter (set when adoption approved)
   adoptedById      Int?
   adoptedBy        User?            @relation("AdoptedPets", fields: [adoptedById], references: [id], onDelete: SetNull)
+
+  // NEW RELATION
+  adoptionRequests AdoptionRequest[]
+}
+
+
+// ADOPTION REQUEST
+model AdoptionRequest {
+  id          Int            @id @default(autoincrement())
+  status      AdoptionStatus @default(PENDING)
+  requestDate DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  userId      Int
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  petId       Int
+  pet         Pet            @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, petId])
+}
+
+
+// NOTIFICATIONS
+model Notification {
+  id        Int      @id @default(autoincrement())
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  timestamp DateTime @default(now())
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

