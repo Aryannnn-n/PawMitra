@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client"
@@ -22,17 +21,84 @@ enum Gender {
   PREFER_NOT_TO_SAY
 }
 
-model User {
-  id         Int      @id @default(autoincrement())
-  name       String   @db.VarChar(255)
-  username   String   @unique @db.VarChar(255)
-  email      String   @unique @db.VarChar(255)
-  password   String   @db.VarChar(255)
-  role       Role     @default(USER)
-  createdAt  DateTime @default(now())
-  age        Int?
-  gender     Gender?
-  phone      String?  @db.VarChar(20)
-  location   String?  @db.VarChar(255)
+enum PetStatus {
+  LOST
+  FOUND
+  ADOPTABLE
+  ADOPTED
+  REUNITED
 }
 
+enum ValidationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PetGender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+// USER
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  username  String   @unique @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  age       Int?
+  gender    Gender?
+  phone     String?  @db.VarChar(20)
+  location  String?  @db.VarChar(255)
+
+  // Relations — Chunk 2
+  pets        Pet[] @relation("OwnedPets")
+  adoptedPets Pet[] @relation("AdoptedPets")
+}
+
+// PET
+model Pet {
+  id               Int              @id @default(autoincrement())
+  name             String?          @db.VarChar(255)
+  type             String           @db.VarChar(100)
+  breed            String?          @db.VarChar(255)
+  color            String?          @db.VarChar(100)
+  gender           PetGender        @default(UNKNOWN)
+  age              Int?
+  wellness         String?          @db.VarChar(255)
+  birthmark        String?          @db.Text
+
+  // Cloudinary — client uploads directly, backend stores URL only
+  imageUrl         String?          @db.VarChar(500)
+  imagePublicId    String?          @db.VarChar(255)
+
+  // Status
+  status           PetStatus        @default(LOST)
+  validationStatus ValidationStatus @default(PENDING)
+
+  // Location
+  state            String           @db.VarChar(255)
+  city             String           @db.VarChar(255)
+  village          String?          @db.VarChar(255)
+  addressLine      String?          @db.VarChar(500)
+  pincode          String?          @db.VarChar(20)
+  googleMapsLink   String?          @db.VarChar(500)
+
+  // Dates
+  incidentDate     DateTime?
+  dateReported     DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Owner (reporter)
+  ownerId          Int
+  owner            User             @relation("OwnedPets", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Adopter (set when adoption approved)
+  adoptedById      Int?
+  adoptedBy        User?            @relation("AdoptedPets", fields: [adoptedById], references: [id], onDelete: SetNull)
+}
