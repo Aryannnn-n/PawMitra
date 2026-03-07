@@ -21,9 +21,6 @@ PetRouter.get('/', getPets);
 // ⚠️  Must be BEFORE /:id to avoid "search" being treated as an id
 PetRouter.get('/search', searchPets);
 
-// GET  /api/pets/:id            → pet detail page
-PetRouter.get('/:id', getPetById);
-
 // ── Protected routes (require JWT) ───────────────────────────────────────────
 
 // GET  /api/pets/upload-signature → returns signed Cloudinary params for direct upload
@@ -32,6 +29,9 @@ PetRouter.get('/upload-signature', requireAuth, getUploadSignature);
 
 // POST /api/pets                → report a new pet (imageUrl + imagePublicId from Cloudinary)
 PetRouter.post('/', requireAuth, createPet);
+
+// GET  /api/pets/:id            → pet detail page
+PetRouter.get('/:id', getPetById);
 
 // PUT  /api/pets/:id            → edit pet (owner only)
 PetRouter.put('/:id', requireAuth, updatePet);
