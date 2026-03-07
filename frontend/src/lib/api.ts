@@ -1,21 +1,36 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
+export const apiFetch = async <T = unknown>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<T> => {
   const token = localStorage.getItem('token');
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });
 
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.msg ?? 'Something went wrong');
+  let data: unknown = null;
+
+  try {
+    data = await res.json();
+  } catch {
+    // response had no JSON
   }
 
-  return res.json();
+  if (!res.ok) {
+    const message =
+      typeof data === 'object' && data && 'msg' in data
+        ? (data as { msg?: string }).msg
+        : 'Something went wrong';
+
+    throw new Error(message ?? 'Something went wrong');
+  }
+
+  return data as T;
 };
