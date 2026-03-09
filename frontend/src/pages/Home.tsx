@@ -23,7 +23,7 @@ const SECTIONS = [
   },
   {
     title: 'Join a Community That Cares',
-    desc: 'From rescuers to pet lovers — together we make every rescue, reunion, and adoption possible. Your compassion helps shape countless happy tails.',
+    desc: 'From rescuers to pet lovers — together we make every rescue, reunion, and adoption possible.',
     image:
       'https://cdn.pixabay.com/photo/2017/02/20/18/03/dog-2083492_1280.jpg',
     link: '/register',
@@ -34,20 +34,12 @@ const SECTIONS = [
 
 const STATS = [
   {
-    icon: <PawPrint className="w-6 h-6" />,
+    icon: <PawPrint className="h-6 w-6" />,
     value: '1,200+',
     label: 'Pets Reported',
   },
-  {
-    icon: <Heart className="w-6 h-6" />,
-    value: '840+',
-    label: 'Successful Adoptions',
-  },
-  {
-    icon: <Users className="w-6 h-6" />,
-    value: '3,500+',
-    label: 'Community Members',
-  },
+  { icon: <Heart className="h-6 w-6" />, value: '840+', label: 'Adoptions' },
+  { icon: <Users className="h-6 w-6" />, value: '3,500+', label: 'Members' },
 ];
 
 export default function Home() {
@@ -55,136 +47,116 @@ export default function Home() {
 
   const greeting = isAuth
     ? user?.role === 'ADMIN'
-      ? `Admin ${user.id} 💫`
-      : `${user?.username} 💫`
-    : 'Guest 💫';
+      ? `Admin ${user.id}`
+      : user?.username
+    : 'Guest';
 
   return (
     <Layout>
       {/* Welcome */}
-      <div className="text-center mt-10 mb-4 animate-fade-in">
-        <p className="text-gray-500 text-sm font-medium tracking-wide uppercase">
-          Welcome back
-        </p>
-        <h2 className="text-2xl font-bold text-indigo-700 mt-1">{greeting}</h2>
+      <div className="mt-10 mb-6 text-center">
+        <p className="text-sm text-muted-foreground">Welcome back</p>
+        <h2 className="text-2xl font-semibold text-indigo-700">
+          {greeting} 💫
+        </h2>
       </div>
 
       {/* Hero */}
-      <section className="flex flex-col items-center justify-center text-center mb-20 px-6 py-16">
-        <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-sm font-medium px-4 py-1.5 rounded-full mb-6 border border-indigo-100">
-          <PawPrint className="w-4 h-4" /> India's Pet Rescue & Adoption Portal
-        </div>
-        <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight tracking-tight max-w-3xl">
-          Every Paw Deserves a{' '}
-          <span className="text-indigo-600">Promise of Love.</span>
+      <section className="mb-24 text-center">
+        <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
+          Every Paw Deserves a
+          <span className="text-indigo-600"> Loving Home</span>
         </h1>
-        <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
-          Reuniting lost pets, inspiring adoptions, and creating happy stories —
-          one paw at a time.
+
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-500">
+          Reuniting lost pets, inspiring adoptions, and building a caring
+          community for animals everywhere.
         </p>
-        <div className="flex gap-3 flex-wrap justify-center">
+
+        <div className="mt-8 flex justify-center gap-4 flex-wrap">
           <Link to={isAuth ? '/report' : '/login'}>
             <Button
               size="lg"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-8 shadow-md"
+              className="transition-all duration-200 hover:scale-105 hover:shadow-md"
             >
-              <PawPrint className="w-4 h-4 mr-2" /> Get Started
+              <PawPrint className="mr-2 h-4 w-4" />
+              Get Started
             </Button>
           </Link>
+
           <Link to="/search">
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-full px-8 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-            >
-              Browse Pets <ArrowRight className="w-4 h-4 ml-2" />
+            <Button size="lg" variant="outline">
+              Browse Pets
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
         </div>
       </section>
 
       {/* Stats */}
-      <section className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mb-24">
+      <section className="mx-auto mb-28 grid max-w-3xl grid-cols-3 gap-6">
         {STATS.map((s) => (
           <div
             key={s.label}
-            className="flex flex-col items-center gap-2 p-6 bg-white rounded-2xl shadow-sm border border-gray-100"
+            className="group relative rounded-xl border border-gray-200 bg-white p-6 text-center shadow-sm
+                 transition-all duration-300 ease-out
+                 hover:-translate-y-2 hover:scale-[1.03] hover:shadow-xl hover:border-indigo-300"
           >
-            <div className="text-indigo-600">{s.icon}</div>
-            <span className="text-2xl font-bold text-gray-900">{s.value}</span>
-            <span className="text-xs text-gray-500 text-center">{s.label}</span>
+            {/* subtle glow */}
+            <div
+              className="absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 
+                      group-hover:opacity-100 bg-linear-to-r from-indigo-50 via-white to-indigo-50"
+            ></div>
+
+            <div className="relative z-10">
+              <div className="mb-2 flex justify-center text-indigo-600 transition-transform duration-300 group-hover:scale-110">
+                {s.icon}
+              </div>
+
+              <p className="text-xl font-semibold transition-colors duration-300 group-hover:text-indigo-600">
+                {s.value}
+              </p>
+
+              <p className="text-xs text-gray-500 transition-colors duration-300 group-hover:text-gray-600">
+                {s.label}
+              </p>
+            </div>
           </div>
         ))}
       </section>
 
-      {/* Alternating Sections */}
-      <section className="space-y-28 max-w-6xl mx-auto px-4 mb-28">
+      {/* Sections */}
+      <section className="space-y-24">
         {SECTIONS.map((s) => (
           <div
             key={s.title}
-            className={`flex flex-col ${s.reverse ? 'md:flex-row-reverse' : 'md:flex-row'} items-center gap-12`}
+            className={`flex flex-col items-center gap-12 ${
+              s.reverse ? 'md:flex-row-reverse' : 'md:flex-row'
+            }`}
           >
             <div className="md:w-1/2">
               <img
                 src={s.image}
                 alt={s.title}
-                className="rounded-3xl shadow-lg w-full object-cover aspect-[4/3]"
-                loading="lazy"
+                className="aspect-[4/3] w-full rounded-2xl object-cover shadow-md"
               />
             </div>
-            <div className="md:w-1/2 text-center md:text-left">
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">
-                {s.title}
-              </h3>
-              <p className="text-gray-500 text-lg leading-relaxed mb-6">
-                {s.desc}
-              </p>
+
+            <div className="md:w-1/2">
+              <h3 className="mb-4 text-3xl font-semibold">{s.title}</h3>
+              <p className="mb-6 text-gray-500">{s.desc}</p>
+
               <Link to={s.link}>
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6">
-                  {s.label} <ArrowRight className="w-4 h-4 ml-2" />
+                <Button
+                className="transition-all duration-200 hover:scale-105 hover:shadow-md"
+                >
+                  {s.label}
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
             </div>
           </div>
         ))}
-      </section>
-
-      {/* CTA Banner */}
-      <section className="rounded-3xl bg-gradient-to-r from-indigo-600 to-indigo-800 text-white text-center py-20 px-6 mb-20 mx-4">
-        <h2 className="text-4xl font-bold mb-4">
-          Together, We Make Tails Wag 🐾
-        </h2>
-        <p className="max-w-2xl mx-auto text-lg opacity-90 mb-8">
-          Be a part of our growing community of pet lovers helping animals find
-          safety, homes, and happiness.
-        </p>
-        <Link to="/register">
-          <Button
-            size="lg"
-            className="bg-white text-indigo-700 hover:bg-gray-100 rounded-full px-10 font-semibold shadow-md"
-          >
-            💫 Join the Movement
-          </Button>
-        </Link>
-      </section>
-
-      {/* Contact */}
-      <section className="text-center py-16 bg-indigo-50 rounded-3xl mx-4 mb-10">
-        <h2 className="text-3xl font-bold text-indigo-700 mb-4">
-          Get In Touch
-        </h2>
-        <p className="text-gray-600 mb-6 text-lg max-w-xl mx-auto">
-          Have questions, suggestions, or want to volunteer? We'd love to hear
-          from you!
-        </p>
-        <a href="mailto:support@pawmitra.org">
-          <Button
-            size="lg"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-10"
-          >
-            📧 Contact Us
-          </Button>
-        </a>
       </section>
     </Layout>
   );
