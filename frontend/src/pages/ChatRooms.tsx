@@ -33,6 +33,7 @@ export function ChatRooms() {
 
   const handleDelete = async (roomId: number) => {
     if (!confirm('Delete this chat room?')) return;
+
     try {
       await apiFetch(`/api/admin/rooms/${roomId}`, { method: 'DELETE' });
       setRooms((r) => r.filter((x) => x.id !== roomId));
@@ -70,7 +71,6 @@ export function ChatRooms() {
                 key={room.id}
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition"
               >
-                {/* Pet image */}
                 <div className="w-14 h-14 rounded-2xl bg-gray-100 overflow-hidden shrink-0">
                   {room.pet?.imageUrl ? (
                     <img
@@ -86,18 +86,19 @@ export function ChatRooms() {
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-gray-900 truncate">
                       {room.name}
                     </h3>
+
                     {room.isDisabled && (
                       <Badge className="bg-red-100 text-red-600 border-red-200 text-xs">
                         Disabled
                       </Badge>
                     )}
                   </div>
+
                   <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
                     <Users className="w-3 h-3" />
                     {room.participants?.length ?? 0} participants
@@ -109,7 +110,6 @@ export function ChatRooms() {
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                   <Link to={`/chat/rooms/${room.id}`}>
                     <Button
@@ -120,6 +120,7 @@ export function ChatRooms() {
                       Open
                     </Button>
                   </Link>
+
                   {user?.role === 'ADMIN' && (
                     <button
                       onClick={() => handleDelete(room.id)}
@@ -148,6 +149,7 @@ export function ChatRoomDetail() {
   const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
+
   const [wsStatus, setWsStatus] = useState<
     'connecting' | 'connected' | 'reconnecting'
   >('connecting');
@@ -164,6 +166,7 @@ export function ChatRoomDetail() {
       const ws = new WebSocket(
         import.meta.env.VITE_WS_URL ?? 'ws://localhost:3000',
       );
+
       wsRef.current = ws;
       setWsStatus('connecting');
 
@@ -173,16 +176,31 @@ export function ChatRoomDetail() {
 
       ws.onmessage = (e) => {
         const data = JSON.parse(e.data);
+
         if (data.type === 'authenticated') {
           setWsStatus('connected');
+
           ws.send(
-            JSON.stringify({ type: 'room:join', roomId: parseInt(roomId) }),
+            JSON.stringify({
+              type: 'room:join',
+              roomId: parseInt(roomId),
+            }),
           );
         }
+
         if (data.type === 'room:message' && String(data.roomId) === roomId) {
+          const incoming: RoomMessage = data.message;
+
           setMessages((prev) => {
-            const isDuplicate = prev.some((m) => m.id === data.message.id);
-            return isDuplicate ? prev : [...prev, data.message];
+            if (data.clientTempId) {
+              return prev.map((m) =>
+                String(m.id) === data.clientTempId ? incoming : m,
+              );
+            }
+
+            if (prev.some((m) => m.id === incoming.id)) return prev;
+
+            return [...prev, incoming];
           });
         }
       };
@@ -196,6 +214,7 @@ export function ChatRoomDetail() {
     };
 
     connect();
+
     return () => {
       wsRef.current?.close();
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
@@ -224,36 +243,51 @@ export function ChatRoomDetail() {
     });
   }, [messages]);
 
+  // ── Send message ──────────────────────────────────────────────────────────
   const sendMessage = () => {
     if (!input.trim()) return;
+
     const ws = wsRef.current;
-    if (ws?.readyState === WebSocket.OPEN) {
-      // Optimistic
-      const optimistic: RoomMessage = {
-        id: Date.now(),
-        message: input.trim(),
-        timestamp: new Date().toISOString(),
-        sender: { id: user!.id, username: user!.username },
-      };
-      setMessages((prev) => [...prev, optimistic]);
-      ws.send(
-        JSON.stringify({
-          type: 'room:send',
-          roomId: parseInt(roomId!),
-          content: input.trim(),
-        }),
-      );
-      setInput('');
-    } else {
+
+    if (ws?.readyState !== WebSocket.OPEN) {
       toast.error('Connection lost. Reconnecting...');
+      return;
     }
+
+    const content = input.trim();
+    const clientTempId = crypto.randomUUID();
+
+    const optimistic: RoomMessage = {
+      id: clientTempId as unknown as number,
+      message: content,
+      timestamp: new Date().toISOString(),
+      sender: { id: user!.id, username: user!.username },
+    };
+
+    setMessages((prev) => [...prev, optimistic]);
+
+    ws.send(
+      JSON.stringify({
+        type: 'room:send',
+        roomId: parseInt(roomId!),
+        content,
+        clientTempId,
+      }),
+    );
+
+    setInput('');
   };
 
   const handleToggleRoom = async () => {
     if (!room) return;
+
     try {
-      await apiFetch(`/api/admin/rooms/${room.id}/toggle`, { method: 'PATCH' });
+      await apiFetch(`/api/admin/rooms/${room.id}/toggle`, {
+        method: 'PATCH',
+      });
+
       setRoom((r) => (r ? { ...r, isDisabled: !r.isDisabled } : r));
+
       toast.success(`Room ${room.isDisabled ? 'enabled' : 'disabled'}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to toggle room');
@@ -265,6 +299,7 @@ export function ChatRoomDetail() {
     connecting: 'bg-yellow-400',
     reconnecting: 'bg-red-500',
   };
+
   const statusLabels = {
     connected: 'Connected',
     connecting: 'Connecting...',
@@ -288,12 +323,14 @@ export function ChatRoomDetail() {
           <div className="px-5 py-3 border-b flex items-center justify-between">
             <div>
               <h2 className="font-bold text-gray-900">{room?.name}</h2>
+
               {room?.isDisabled && (
                 <Badge className="bg-red-100 text-red-600 text-xs mt-0.5">
                   Disabled
                 </Badge>
               )}
             </div>
+
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <span
@@ -301,6 +338,7 @@ export function ChatRoomDetail() {
                 />
                 {statusLabels[wsStatus]}
               </div>
+
               {user?.role === 'ADMIN' && room && (
                 <button
                   onClick={handleToggleRoom}
@@ -328,6 +366,7 @@ export function ChatRoomDetail() {
           {/* Participants */}
           <div className="px-5 py-2.5 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
             <Users className="w-4 h-4 text-gray-400 shrink-0" />
+
             {room?.participants?.map((p) => (
               <span
                 key={p.user.id}
@@ -351,16 +390,20 @@ export function ChatRoomDetail() {
             ) : (
               messages.map((msg) => {
                 const isMine = msg.sender.id === user?.id;
+
                 return (
                   <div
                     key={msg.id}
-                    className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}
+                    className={`flex flex-col ${
+                      isMine ? 'items-end' : 'items-start'
+                    }`}
                   >
                     {!isMine && (
                       <span className="text-xs text-gray-400 mb-1 ml-1">
                         {msg.sender.username}
                       </span>
                     )}
+
                     <div
                       className={`max-w-[65%] px-4 py-2.5 rounded-2xl text-sm
                       ${
@@ -370,8 +413,11 @@ export function ChatRoomDetail() {
                       }`}
                     >
                       <p className="break-words">{msg.message}</p>
+
                       <p
-                        className={`text-[10px] mt-1 ${isMine ? 'text-indigo-200' : 'text-gray-400'} text-right`}
+                        className={`text-[10px] mt-1 ${
+                          isMine ? 'text-indigo-200' : 'text-gray-400'
+                        } text-right`}
                       >
                         {new Date(msg.timestamp).toLocaleTimeString('en-IN', {
                           hour: '2-digit',
@@ -403,6 +449,7 @@ export function ChatRoomDetail() {
                 disabled={wsStatus !== 'connected'}
                 className="flex-1"
               />
+
               <Button
                 onClick={sendMessage}
                 disabled={!input.trim() || wsStatus !== 'connected'}

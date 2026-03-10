@@ -4,6 +4,7 @@ import {
   deleteMe,
   getMe,
   getUserById,
+  getUsers,
   updateMe,
 } from '../controllers/user.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
@@ -12,6 +13,9 @@ const UserRouter = Router();
 
 // All user routes require authentication
 UserRouter.use(requireAuth);
+
+// GET /api/users?role=ADMIN  OR  ?search=  → list/search users
+UserRouter.get('/', getUsers);
 
 // GET    /api/users/me              → get own profile
 UserRouter.get('/me', getMe);

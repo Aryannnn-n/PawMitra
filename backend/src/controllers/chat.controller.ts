@@ -1,6 +1,33 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 
+// GET /api/chat/recent-contacts
+// Returns last 10 distinct users the admin has DM'd
+export const getRecentContacts = async (req: Request, res: Response) => {
+  const myId = req.user!.id;
+  const messages = await prisma.message.findMany({
+    where: { OR: [{ senderId: myId }, { receiverId: myId }] },
+    orderBy: { timestamp: 'desc' },
+    include: {
+      sender: { select: { id: true, username: true } },
+      receiver: { select: { id: true, username: true } },
+    },
+  });
+
+  // Extract unique other-party users, keep order, limit 10
+  const seen = new Set<number>();
+  const users = [];
+  for (const msg of messages) {
+    const other = msg.senderId === myId ? msg.receiver : msg.sender;
+    if (!seen.has(other.id)) {
+      seen.add(other.id);
+      users.push(other);
+    }
+    if (users.length === 10) break;
+  }
+  res.json({ users });
+};
+
 // ── GET /api/chat/dm/:userId ──────────────────────────────────────────────────
 // Full DM history between current user and another user
 export const getDmHistory = async (

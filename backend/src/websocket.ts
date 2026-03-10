@@ -52,7 +52,6 @@ export const initWebSocket = (server: Server) => {
       const { type } = parsed;
 
       // ── authenticate ──────────────────────────────────────────────────────
-      // Client must send this first before any other event
       if (type === 'authenticate') {
         const token = parsed.token as string;
         if (!token) {
@@ -64,15 +63,17 @@ export const initWebSocket = (server: Server) => {
           const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
           authedUser = decoded;
           clients.set(decoded.id, ws);
+
           send(ws, { type: 'authenticated', userId: decoded.id });
           console.log(`WS: User ${decoded.id} authenticated`);
         } catch {
           send(ws, { type: 'error', msg: 'Invalid or expired token' });
         }
+
         return;
       }
 
-      // All events below require authentication
+      // ── Require authentication for all other events ───────────────────────
       if (!authedUser) {
         send(ws, { type: 'error', msg: 'Please authenticate first' });
         return;
@@ -95,6 +96,7 @@ export const initWebSocket = (server: Server) => {
         const receiver = await prisma.user.findUnique({
           where: { id: receiverId },
         });
+
         if (!receiver) {
           send(ws, { type: 'error', msg: 'Receiver not found' });
           return;
@@ -113,7 +115,7 @@ export const initWebSocket = (server: Server) => {
           },
         });
 
-        // Create notification for receiver
+        // Create notification
         await prisma.notification.create({
           data: {
             userId: receiverId,
@@ -121,23 +123,21 @@ export const initWebSocket = (server: Server) => {
           },
         });
 
-        // Send to receiver if online
+        // Send message if receiver online
         sendToUser(receiverId, { type: 'dm:receive', message });
 
-        // Echo back to sender as confirmation
-        send(ws, { type: 'dm:receive', message });
         return;
       }
 
       // ── room:join ─────────────────────────────────────────────────────────
       if (type === 'room:join') {
         const roomId = parsed.roomId as number;
+
         if (!roomId) {
           send(ws, { type: 'error', msg: 'roomId is required' });
           return;
         }
 
-        // Check user is a participant
         const participant = await prisma.roomParticipant.findUnique({
           where: { roomId_userId: { roomId, userId: authedUser.id } },
         });
@@ -158,13 +158,13 @@ export const initWebSocket = (server: Server) => {
       if (type === 'room:send') {
         const roomId = parsed.roomId as number;
         const content = (parsed.content as string)?.trim();
+        const clientTempId = parsed.clientTempId as string | undefined;
 
         if (!roomId || !content) {
           send(ws, { type: 'error', msg: 'roomId and content are required' });
           return;
         }
 
-        // Check room exists and is active
         const room = await prisma.chatRoom.findUnique({
           where: { id: roomId },
           include: { participants: true },
@@ -183,10 +183,10 @@ export const initWebSocket = (server: Server) => {
           return;
         }
 
-        // Check sender is a participant
         const isParticipant = room.participants.some(
           (p) => p.userId === authedUser!.id,
         );
+
         if (!isParticipant) {
           send(ws, {
             type: 'error',
@@ -195,7 +195,7 @@ export const initWebSocket = (server: Server) => {
           return;
         }
 
-        // Save message to DB
+        // Save message
         const roomMessage = await prisma.roomMessage.create({
           data: {
             roomId,
@@ -207,38 +207,46 @@ export const initWebSocket = (server: Server) => {
           },
         });
 
-        // Notify + broadcast to all other participants
+        // Get other participants
         const otherParticipantIds = room.participants
           .filter((p) => p.userId !== authedUser!.id)
           .map((p) => p.userId);
 
+        // Broadcast message to other participants
         for (const uid of otherParticipantIds) {
-          // Real-time push if online
           sendToUser(uid, {
             type: 'room:message',
             roomId,
             message: roomMessage,
           });
+        }
 
-          // Notification (for offline users)
-          await prisma.notification.create({
-            data: {
+        // Create notifications efficiently
+        if (otherParticipantIds.length > 0) {
+          await prisma.notification.createMany({
+            data: otherParticipantIds.map((uid) => ({
               userId: uid,
               message: `💬 New message in room: ${room.name}`,
-            },
+            })),
           });
         }
 
-        // Echo back to sender
-        send(ws, { type: 'room:message', roomId, message: roomMessage });
+        // Echo back to sender with clientTempId (fix for optimistic UI duplication)
+        send(ws, {
+          type: 'room:message',
+          roomId,
+          message: roomMessage,
+          clientTempId,
+        });
+
         return;
       }
 
-      // Unknown event
+      // ── Unknown event ─────────────────────────────────────────────────────
       send(ws, { type: 'error', msg: `Unknown event type: ${type}` });
     });
 
-    // ── On disconnect: remove from clients map ───────────────────────────────
+    // ── On disconnect ───────────────────────────────────────────────────────
     ws.on('close', () => {
       if (authedUser) {
         clients.delete(authedUser.id);
@@ -255,5 +263,5 @@ export const initWebSocket = (server: Server) => {
   return wss;
 };
 
-// ── Export clients map so REST routes can use sendToUser if needed ────────────
+// ── Export clients map for REST usage ────────────────────────────────────────
 export { clients, sendToUser };

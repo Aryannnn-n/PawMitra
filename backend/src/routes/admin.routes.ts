@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   changePetStatus,
   changePetValidation,
+  createRoom,
   deleteRoom,
   deleteUser,
   getAllAdoptions,
@@ -44,6 +45,9 @@ AdminRouter.delete('/users/:id', deleteUser);
 AdminRouter.get('/adoptions', getAllAdoptions);
 
 // ── Chat Rooms ────────────────────────────────────────────────────────────────
+// POST    /api/admin/rooms               → create chat room
+AdminRouter.post('/rooms', createRoom);
+
 // GET    /api/admin/rooms               → all chat rooms
 AdminRouter.get('/rooms', getAllRooms);
 

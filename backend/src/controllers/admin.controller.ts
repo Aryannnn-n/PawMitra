@@ -302,6 +302,80 @@ export const getAllAdoptions = async (
   }
 };
 
+// ── POST /api/admin/rooms ─────────────────────────────────────────────────────
+// Admin manually creates a chat room with selected participants
+export const createRoom = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { name, petId, participantIds } = req.body as {
+      name: string;
+      petId?: number;
+      participantIds: number[]; // user IDs selected by admin (excluding admins — added automatically)
+    };
+
+    if (!name?.trim()) {
+      res.status(400).json({ msg: 'Room name is required' });
+      return;
+    }
+
+    if (!Array.isArray(participantIds) || participantIds.length === 0) {
+      res.status(400).json({ msg: 'At least one participant is required' });
+      return;
+    }
+
+    // Fetch all admins — always included
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { id: true },
+    });
+
+    // Merge: selected users + all admins, deduplicated
+    const allParticipantIds = [
+      ...new Set([...participantIds, ...admins.map((a) => a.id)]),
+    ];
+
+    // Validate petId if provided
+    if (petId) {
+      const pet = await prisma.pet.findUnique({ where: { id: petId } });
+      if (!pet) {
+        res.status(404).json({ msg: 'Pet not found' });
+        return;
+      }
+    }
+
+    const room = await prisma.chatRoom.create({
+      data: {
+        name: name.trim(),
+        ...(petId ? { petId } : {}),
+        participants: {
+          create: allParticipantIds.map((uid) => ({ userId: uid })),
+        },
+      },
+      include: {
+        participants: {
+          include: { user: { select: { id: true, username: true } } },
+        },
+        pet: { select: { id: true, name: true, type: true } },
+      },
+    });
+
+    // Notify all participants
+    await prisma.notification.createMany({
+      data: allParticipantIds.map((uid) => ({
+        userId: uid,
+        message: `💬 You've been added to chat room "${room.name}".`,
+      })),
+    });
+
+    res.status(201).json({ msg: 'Chat room created ✅', room });
+  } catch (error) {
+    console.error('createRoom error:', error);
+    res.status(500).json({ msg: 'Internal server error' });
+  }
+};
+
 // ── GET /api/admin/rooms ──────────────────────────────────────────────────────
 export const getAllRooms = async (
   _req: Request,

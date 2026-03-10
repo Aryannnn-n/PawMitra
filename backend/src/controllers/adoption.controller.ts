@@ -113,8 +113,7 @@ export const getMyAdoptions = async (
 };
 
 // ── POST /api/adoptions/:id/approve ──────────────────────────────────────────
-// Admin only — approves request, marks pet as ADOPTED
-// Chat room creation will be wired in Chunk 4
+// Admin only — approves request, marks pet as ADOPTED, chat room creation
 export const approveAdoption = async (
   req: Request,
   res: Response,
@@ -147,7 +146,12 @@ export const approveAdoption = async (
     const adopterId = adoptionReq.userId;
     const ownerId = pet.ownerId;
 
-    // ── Transaction: approve request + update pet + notify both parties ────────
+    // Fetch all admins to add to room
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { id: true },
+    });
+
     await prisma.$transaction(async (tx) => {
       // 1. Approve the request
       await tx.adoptionRequest.update({
@@ -155,19 +159,15 @@ export const approveAdoption = async (
         data: { status: 'APPROVED' },
       });
 
-      // 2. Mark pet as ADOPTED and set adoptedById
+      // 2. Mark pet as ADOPTED
       await tx.pet.update({
         where: { id: pet.id },
         data: { status: 'ADOPTED', adoptedById: adopterId },
       });
 
-      // 3. Reject all other PENDING requests for the same pet
+      // 3. Reject all other PENDING requests for same pet
       await tx.adoptionRequest.updateMany({
-        where: {
-          petId: pet.id,
-          status: 'PENDING',
-          NOT: { id: reqId },
-        },
+        where: { petId: pet.id, status: 'PENDING', NOT: { id: reqId } },
         data: { status: 'REJECTED' },
       });
 
@@ -175,7 +175,7 @@ export const approveAdoption = async (
       await tx.notification.create({
         data: {
           userId: adopterId,
-          message: `🎉 Congratulations! Your adoption request for ${pet.name || pet.type} has been approved.`,
+          message: `🎉 Your adoption request for ${pet.name || pet.type} has been approved.`,
         },
       });
 
@@ -186,10 +186,38 @@ export const approveAdoption = async (
           message: `✅ Your pet "${pet.name || pet.type}" has been successfully adopted.`,
         },
       });
+
+      // 6. Auto-create chat room ─────────────────────────────────────────────
+      // Participants: adopter + owner (if different) + all admins
+      const participantIds = [
+        ...new Set([
+          adopterId,
+          ownerId,
+          ...admins.map((a) => a.id),
+        ]),
+      ];
+
+      const room = await tx.chatRoom.create({
+        data: {
+          name: `Adoption: ${pet.name || pet.type} #${pet.id}`,
+          petId: pet.id,
+          participants: {
+            create: participantIds.map((uid) => ({ userId: uid })),
+          },
+        },
+      });
+
+      // 7. Notify all room participants about the new room
+      await tx.notification.createMany({
+        data: participantIds.map((uid) => ({
+          userId: uid,
+          message: `💬 A chat room has been created for the adoption of "${pet.name || pet.type}". Join to coordinate!`,
+        })),
+      });
     });
 
     res.status(200).json({
-      msg: 'Adoption approved ✅ Notifications sent to adopter and owner.',
+      msg: 'Adoption approved ✅ Chat room created and notifications sent.',
     });
   } catch (error) {
     console.error('approveAdoption error:', error);

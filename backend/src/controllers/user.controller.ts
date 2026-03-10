@@ -207,3 +207,43 @@ export const getUserById = async (
     res.status(500).json({ msg: 'Internal server error' });
   }
 };
+
+// ── GET /api/users ────────────────────────────────────────────────────────────
+// ?role=ADMIN|USER  → filter by role
+// ?search=          → search by username or name (case-insensitive)
+export const getUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { role, search } = req.query;
+
+    const users = await prisma.user.findMany({
+      where: {
+        ...(role
+          ? { role: String(role).toUpperCase() as 'USER' | 'ADMIN' }
+          : {}),
+        ...(search
+          ? {
+              OR: [
+                { username: { contains: String(search), mode: 'insensitive' } },
+                { name: { contains: String(search), mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        NOT: { id: req.user!.id },
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        role: true,
+      },
+      take: 20,
+      orderBy: { username: 'asc' },
+    });
+
+    res.status(200).json({ users });
+  } catch (error) {
+    console.error('getUsers error:', error);
+    res.status(500).json({ msg: 'Internal server error' });
+  }
+};
