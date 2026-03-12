@@ -24,8 +24,7 @@ const SECTIONS = [
   {
     title: 'Join a Community That Cares',
     desc: 'From rescuers to pet lovers — together we make every rescue, reunion, and adoption possible.',
-    image:
-      'https://cdn.pixabay.com/photo/2017/02/20/18/03/dog-2083492_1280.jpg',
+    image: '/roger.jpg',
     link: '/register',
     label: 'Join PawMitra',
     reverse: false,
@@ -147,9 +146,7 @@ export default function Home() {
               <p className="mb-6 text-gray-500">{s.desc}</p>
 
               <Link to={s.link}>
-                <Button
-                className="transition-all duration-200 hover:scale-105 hover:shadow-md"
-                >
+                <Button className="transition-all duration-200 hover:scale-105 hover:shadow-md">
                   {s.label}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
