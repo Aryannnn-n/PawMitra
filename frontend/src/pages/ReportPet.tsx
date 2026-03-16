@@ -114,7 +114,7 @@ export default function ReportPet() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto mt-8 mb-16">
-        <Card className="border-0 shadow-sm bg-white/80 backdrop-blur">
+        <Card className="border-0 shadow-sm bg-white/80 backdrop-transparent">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">

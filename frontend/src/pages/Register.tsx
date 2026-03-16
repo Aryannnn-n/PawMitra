@@ -153,7 +153,7 @@ export default function Register() {
   return (
     <Layout>
       <div className="flex items-center justify-center px-4 py-10">
-        <Card className="w-full max-w-lg shadow-lg border-0 bg-white/80 backdrop-blur">
+        <Card className="w-full max-w-lg shadow-lg border-0 bg-white/80 backdrop-transparent">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">

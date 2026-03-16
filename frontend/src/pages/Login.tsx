@@ -44,7 +44,7 @@ export default function Login() {
 
       setAuth(data.user, data.token);
       toast.success(`Welcome back, ${data.user.username}! 🐾`);
-      navigate(data.user.role === 'ADMIN' ? '/admin' : '/');
+      navigate('/');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -55,7 +55,7 @@ export default function Login() {
   return (
     <Layout>
       <div className="min-h-[70vh] flex items-center justify-center px-4">
-        <Card className="w-full max-w-md shadow-lg border-0 bg-white/80 backdrop-blur">
+        <Card className="w-full max-w-md shadow-lg border-0 bg-white/80 backdrop-transparent">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">

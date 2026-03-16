@@ -150,7 +150,7 @@ export default function Profile() {
       <div className="max-w-5xl mx-auto mt-8 mb-16 space-y-8">
 
         {/* Profile Header */}
-        <Card className="border-0 shadow-sm bg-white/80 backdrop-blur">
+        <Card className="border-0 shadow-sm bg-white/80 backdrop-transparent">
           <CardContent className="pt-8 pb-6">
             <div className="flex flex-col items-center text-center mb-6">
               <img
