@@ -42,6 +42,8 @@ export const searchPetSchema = z.object({
   status: z
     .enum(['LOST', 'FOUND', 'ADOPTABLE', 'ADOPTED', 'REUNITED'])
     .optional(),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(20),
 });
 
 export type CreatePetInput = z.infer<typeof createPetSchema>;

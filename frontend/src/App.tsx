@@ -1,7 +1,6 @@
 import { ProtectedRoute } from '@/components/shared/ProtectedRoute';
-import AdminDashboard from '@/pages/AdminDashboard';
-import Chat from '@/pages/Chat';
-import { ChatRoomDetail, ChatRooms } from '@/pages/ChatRooms';
+import { Loader2 } from 'lucide-react';
+import { Suspense, lazy } from 'react';
 import EditPet from '@/pages/EditPet';
 import Home from '@/pages/Home';
 import Login from '@/pages/Login';
@@ -14,10 +13,22 @@ import SearchPage from '@/pages/Search';
 import UserDetail from '@/pages/UserDetail';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
+const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
+const Chat = lazy(() => import('@/pages/Chat'));
+const ChatRooms = lazy(() => import('@/pages/ChatRooms').then((module) => ({ default: module.ChatRooms })));
+const ChatRoomDetail = lazy(() => import('@/pages/ChatRooms').then((module) => ({ default: module.ChatRoomDetail })));
+
+const PageLoader = () => (
+  <div className="flex h-screen w-full items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+  </div>
+);
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -102,6 +113,7 @@ export default function App() {
           }
         />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

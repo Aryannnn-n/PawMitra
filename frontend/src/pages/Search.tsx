@@ -20,7 +20,8 @@ const STATUSES: { label: string; value: PetStatus | 'ALL' }[] = [
 
 interface SearchResponse {
   grouped: Record<PetStatus, Pet[]>;
-  total: number;
+  pets: Pet[];
+  hasMore: boolean;
   filters: Record<string, string>;
 }
 
@@ -37,51 +38,75 @@ export default function SearchPage() {
   const [activeStatus, setActiveStatus] = useState<PetStatus | 'ALL'>('ALL');
   const [allPets, setAllPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
   // Run search on mount if params exist
   useEffect(() => {
     const hasParams = Object.values(filters).some((v) => v.trim());
-    if (hasParams) runSearch();
-    else fetchAll();
+    if (hasParams) runSearch(1);
+    else fetchAll(1);
   }, []);
 
-  const fetchAll = async () => {
-    setLoading(true);
+  const fetchAll = async (pageNum: number) => {
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
+
     try {
-      const data = await apiFetch<{ pets: Pet[] }>('/api/pets');
-      setAllPets(data.pets);
+      const data = await apiFetch<{ pets: Pet[]; hasMore: boolean }>(`/api/pets?page=${pageNum}&limit=12`);
+      setAllPets(prev => pageNum === 1 ? data.pets : [...prev, ...data.pets]);
+      setHasMore(data.hasMore);
+      setPage(pageNum);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to load pets');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setSearched(true);
     }
   };
 
-  const runSearch = async () => {
-    setLoading(true);
+  const runSearch = async (pageNum: number) => {
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
+
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => {
       if (v.trim()) params.set(k, v.trim());
     });
+    // Set URL params (excluding page)
     setSearchParams(params);
+    
+    // Add page for API
+    params.set('page', pageNum.toString());
+    params.set('limit', '12');
 
     try {
       const data = await apiFetch<SearchResponse>(`/api/pets/search?${params}`);
-      const flat = Object.values(data.grouped).flat();
-      setAllPets(flat);
+      const flat = data.pets || Object.values(data.grouped).flat();
+      setAllPets(prev => pageNum === 1 ? flat : [...prev, ...flat]);
+      setHasMore(data.hasMore);
+      setPage(pageNum);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Search failed');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setSearched(true);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    runSearch();
+    runSearch(1);
+  };
+
+  const handleLoadMore = () => {
+    const hasParams = Object.values(filters).some((v) => String(v).trim());
+    if (hasParams) runSearch(page + 1);
+    else fetchAll(page + 1);
   };
 
   const visiblePets =
@@ -151,7 +176,7 @@ export default function SearchPage() {
               onClick={() => {
                 setFilters({ type: '', breed: '', color: '', location: '' });
                 setSearchParams({});
-                fetchAll();
+                fetchAll(1);
               }}
               className="text-sm text-gray-400 hover:text-gray-600 transition flex items-center gap-1"
             >
@@ -215,6 +240,23 @@ export default function SearchPage() {
           <p className="text-sm mt-1">Try adjusting your filters</p>
         </div>
       ) : null}
+
+      {/* Load More Button */}
+      {hasMore && visiblePets.length > 0 && !loading && (
+        <div className="flex justify-center mt-12 mb-8">
+          <Button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            variant="outline"
+            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-8 py-5 rounded-full"
+          >
+            {loadingMore ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : null}
+            {loadingMore ? 'Loading...' : 'Load More Pets'}
+          </Button>
+        </div>
+      )}
     </Layout>
   );
 }

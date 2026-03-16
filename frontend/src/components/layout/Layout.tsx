@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StarsBackground } from './StarsBackground';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -377,11 +378,14 @@ export const Footer = () => (
 );
 
 export const Layout = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex min-h-screen flex-col bg-background">
-    <Navbar />
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-      {children}
-    </main>
-    <Footer />
+  <div className="flex min-h-screen flex-col bg-background dark:bg-transparent relative">
+    <StarsBackground />
+    <div className="relative z-10 flex min-h-screen flex-col">
+      <Navbar />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+        {children}
+      </main>
+      <Footer />
+    </div>
   </div>
 );

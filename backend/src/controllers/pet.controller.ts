@@ -40,16 +40,23 @@ const petListSelect = {
 
 // ── GET /api/pets  ────────────────────────────────────────────────────────────
 // Home feed — latest 25 approved pets, auto-marks adoptable
-export const getPets = async (_req: Request, res: Response): Promise<void> => {
+export const getPets = async (req: Request, res: Response): Promise<void> => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
     const pets = await prisma.pet.findMany({
       where: { validationStatus: 'APPROVED' },
       orderBy: { dateReported: 'desc' },
-      take: 25,
+      skip: (page - 1) * limit,
+      take: limit + 1, // request 1 extra to check hasMore
       select: petListSelect,
     });
 
-    // Auto-mark FOUND pets as ADOPTABLE after 15 days (mirrors Flask logic)
+    const hasMore = pets.length > limit;
+    if (hasMore) pets.pop();
+
+    // Auto-mark FOUND pets as ADOPTABLE after 15 days
     const toUpdate = pets
       .filter((p) => p.status === 'FOUND' && daysSince(p.dateReported) >= 15)
       .map((p) => p.id);
@@ -61,7 +68,7 @@ export const getPets = async (_req: Request, res: Response): Promise<void> => {
       });
     }
 
-    res.status(200).json({ pets, total: pets.length });
+    res.status(200).json({ pets, hasMore });
   } catch (error) {
     console.error('getPets error:', error);
     res.status(500).json({ msg: 'Internal server error' });
@@ -106,8 +113,13 @@ export const searchPets = async (
         }),
       },
       orderBy: { dateReported: 'desc' },
+      skip: (filters.page - 1) * filters.limit,
+      take: filters.limit + 1,
       select: petListSelect,
     });
+
+    const hasMore = pets.length > filters.limit;
+    if (hasMore) pets.pop();
 
     // Group by status — mirrors Flask grouped response
     const grouped = {
@@ -121,7 +133,7 @@ export const searchPets = async (
       grouped[pet.status].push(pet);
     }
 
-    res.status(200).json({ filters, grouped, total: pets.length });
+    res.status(200).json({ filters, grouped, pets, hasMore });
   } catch (error) {
     if (error instanceof ZodError) {
       res.status(400).json({ msg: 'Invalid filters', errors: error.flatten() });
